@@ -20,7 +20,7 @@ from monkeytype.tracing import (
     get_func,
     trace_calls,
 )
-from monkeytype.typing import NoneType
+from monkeytype.type_utils import NoneType
 
 # avoid a hard dependency on Cython
 try:

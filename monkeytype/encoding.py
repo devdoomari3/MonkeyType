@@ -21,7 +21,7 @@ from monkeytype.compat import is_any, is_union, is_generic, qualname_of_generic
 from monkeytype.db.base import CallTraceThunk
 from monkeytype.exceptions import InvalidTypeError
 from monkeytype.tracing import CallTrace
-from monkeytype.typing import NoneType
+from monkeytype.type_utils import NoneType
 from monkeytype.util import (
     get_func_in_module,
     get_name_in_module,
@@ -101,11 +101,11 @@ def type_from_dict(d: TypeDict) -> Union[type, TypedDictProxy]:
     module, qualname = d['module'], d['qualname']
     typ: Union[type, TypedDictProxy]
     if qualname == typed_dict_proxy_key:
-        structured_dict_attrs = d['structured_dict_attrs']
+        typed_dict_proxy_attrs = d[typed_dict_proxy_attrs_key]
         typ = TypedDictProxy(
             d[typed_dict_proxy_name_key],
             **{
-                key: type_from_dict(value) for key, value in structured_dict_attrs.items()
+                key: type_from_dict(value) for key, value in typed_dict_proxy_attrs.items()
             }
         )
     elif module == 'builtins' and qualname in _HIDDEN_BUILTIN_TYPES:

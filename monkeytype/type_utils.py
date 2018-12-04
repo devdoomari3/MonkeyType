@@ -5,8 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 import inspect
 import types
-import typing
-print(typing)
 from typing import (
     Any,
     Callable,
@@ -27,13 +25,13 @@ from monkeytype.compat import is_any, is_generic, is_generic_of, is_union, name_
 
 # The shrink_types and get_type functions construct new types at runtime. Mypy
 # cannot currently type these functions, so the type signatures for this file
-# live in typing.pyi.
+# live in type_utils.pyi.
 
 def shrink_types(types: Set[Union[type, TypedDictProxy]]):
     """Return the smallest type equivalent to Union[types]"""
     types_list = list(types)
 
-    types = tuple(types)
+    types = tuple(types_list)
 
     if len(types) == 0:
         return Any
@@ -70,6 +68,7 @@ def get_type(obj):
 
     elif isinstance(obj, TypedDictProxy):
         return TypedDictProxy(
+            obj.typed_dict_proxy_name,
             **{
                 key: get_type(value) for key, value in obj.items()
             }
