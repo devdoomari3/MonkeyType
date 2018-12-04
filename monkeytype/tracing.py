@@ -25,9 +25,10 @@ from typing import (
     Optional,
     Union,
     cast,
+    Mapping
 )
 
-from monkeytype.StructuredDict import StructuredDict
+from monkeytype.TypedDictProxy import TypedDictProxy
 
 try:
     from django.utils.functional import cached_property  # type: ignore
@@ -47,9 +48,9 @@ class CallTrace:
     def __init__(
         self,
         func: Callable,
-        arg_types: Dict[str, Union[type, StructuredDict]],
-        return_type: Optional[Union[type, StructuredDict]] = None,
-        yield_type: Optional[Union[type, StructuredDict]] = None
+        arg_types: Mapping[str, Union[type, TypedDictProxy]],
+        return_type: Optional[Union[type, TypedDictProxy]] = None,
+        yield_type: Optional[Union[type, TypedDictProxy]] = None
     ) -> None:
         """
         Args:

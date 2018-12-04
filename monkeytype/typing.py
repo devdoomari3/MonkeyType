@@ -5,6 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 import inspect
 import types
+import typing
+print(typing)
 from typing import (
     Any,
     Callable,
@@ -19,7 +21,7 @@ from typing import (
     Union,
 )
 
-from monkeytype.StructuredDict import StructuredDict
+from monkeytype.TypedDictProxy import TypedDictProxy
 from monkeytype.compat import is_any, is_generic, is_generic_of, is_union, name_of_generic
 
 
@@ -27,9 +29,12 @@ from monkeytype.compat import is_any, is_generic, is_generic_of, is_union, name_
 # cannot currently type these functions, so the type signatures for this file
 # live in typing.pyi.
 
-def shrink_types(types):
+def shrink_types(types: Set[Union[type, TypedDictProxy]]):
     """Return the smallest type equivalent to Union[types]"""
+    types_list = list(types)
+
     types = tuple(types)
+
     if len(types) == 0:
         return Any
     # Union will handle deduplicating types (both by equality and subtype
@@ -63,8 +68,8 @@ def get_type(obj):
     elif isinstance(obj, types.GeneratorType):
         return Iterator[Any]
 
-    elif isinstance(obj, StructuredDict):
-        return StructuredDict(
+    elif isinstance(obj, TypedDictProxy):
+        return TypedDictProxy(
             **{
                 key: get_type(value) for key, value in obj.items()
             }

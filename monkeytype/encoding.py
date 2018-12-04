@@ -13,9 +13,10 @@ from typing import (
     Optional,
     Type,
     TypeVar,
-    Union)
+    Union, Mapping)
 
-from monkeytype.StructuredDict import StructuredDict, structured_dict_name
+from monkeytype.TypedDictProxy import TypedDictProxy, typed_dict_proxy_key, \
+    typed_dict_proxy_attrs_key, typed_dict_proxy_name_key
 from monkeytype.compat import is_any, is_union, is_generic, qualname_of_generic
 from monkeytype.db.base import CallTraceThunk
 from monkeytype.exceptions import InvalidTypeError
@@ -47,7 +48,7 @@ logger = logging.getLogger(__name__)
 TypeDict = Dict[str, Any]
 
 
-def type_to_dict(typ: Union[type, StructuredDict]) -> TypeDict:
+def type_to_dict(typ: Union[type, TypedDictProxy]) -> TypeDict:
     """Convert a type into a dictionary representation that we can store.
 
     The dictionary must:
@@ -61,19 +62,23 @@ def type_to_dict(typ: Union[type, StructuredDict]) -> TypeDict:
         qualname = 'Any'
     elif is_generic(typ):
         qualname = qualname_of_generic(typ)
-    elif isinstance(typ, StructuredDict):
-        qualname = structured_dict_name
+    elif isinstance(typ, TypedDictProxy):
+        qualname = typed_dict_proxy_key
     else:
-        qualname = typ.__qualname__
+        try:
+            qualname = typ.__qualname__
+        except:
+            print('!')
     d: TypeDict = {
         'module': typ.__module__,
         'qualname': qualname,
     }
-    if isinstance(typ, StructuredDict):
-        structured_dict_attrs = {
+    if isinstance(typ, TypedDictProxy):
+        typed_dict_proxy_attrs = {
             key: type_to_dict(value) for key, value in typ.items()
         }
-        d['structured_dict_attrs'] = structured_dict_attrs
+        d[typed_dict_proxy_attrs_key] = typed_dict_proxy_attrs
+        d[typed_dict_proxy_name_key] = typ.typed_dict_proxy_name
     elem_types = getattr(typ, '__args__', None)
     if elem_types and is_generic(typ):
         d['elem_types'] = [type_to_dict(t) for t in elem_types]
@@ -86,7 +91,7 @@ _HIDDEN_BUILTIN_TYPES: Dict[str, type] = {
 }
 
 
-def type_from_dict(d: TypeDict) -> type:
+def type_from_dict(d: TypeDict) -> Union[type, TypedDictProxy]:
     """Given a dictionary produced by type_to_dict, return the equivalent type.
 
     Raises:
@@ -94,9 +99,11 @@ def type_from_dict(d: TypeDict) -> type:
         InvalidTypeError if the named type isn't actually a type
     """
     module, qualname = d['module'], d['qualname']
-    if qualname == structured_dict_name:
+    typ: Union[type, TypedDictProxy]
+    if qualname == typed_dict_proxy_key:
         structured_dict_attrs = d['structured_dict_attrs']
-        typ = StructuredDict(
+        typ = TypedDictProxy(
+            d[typed_dict_proxy_name_key],
             **{
                 key: type_from_dict(value) for key, value in structured_dict_attrs.items()
             }
@@ -106,10 +113,10 @@ def type_from_dict(d: TypeDict) -> type:
     else:
         typ = get_name_in_module(module, qualname)
     if not (
-        isinstance(typ, type) or
-        isinstance(typ, StructuredDict) or
-        is_any(typ) or
-        is_generic(typ)
+            isinstance(typ, type) or
+            isinstance(typ, TypedDictProxy) or
+            is_any(typ) or
+            is_generic(typ)
     ):
         raise InvalidTypeError(
             f"Attribute specified by '{qualname}' in module '{module}' "
@@ -125,43 +132,45 @@ def type_from_dict(d: TypeDict) -> type:
     return typ
 
 
-def type_to_json(typ: type) -> str:
+def type_to_json(typ: Union[type, TypedDictProxy]) -> str:
     """Encode the supplied type as json using type_to_dict."""
     type_dict = type_to_dict(typ)
     return json.dumps(type_dict, sort_keys=True)
 
 
-def type_from_json(typ_json: str) -> type:
+def type_from_json(typ_json: str) -> Union[type, TypedDictProxy]:
     """Reify a type from the format produced by type_to_json."""
     type_dict = json.loads(typ_json)
     return type_from_dict(type_dict)
 
 
-def arg_types_to_json(arg_types: Dict[str, type]) -> str:
+def arg_types_to_json(arg_types: Mapping[str, Union[type, TypedDictProxy]]) -> str:
     """Encode the supplied argument types as json"""
     type_dict = {name: type_to_dict(typ) for name, typ in arg_types.items()}
     return json.dumps(type_dict, sort_keys=True)
 
 
-def arg_types_from_json(arg_types_json: str) -> Dict[str, type]:
+def arg_types_from_json(arg_types_json: str) -> Dict[str, Union[type, TypedDictProxy]]:
     """Reify the encoded argument types from the format produced by arg_types_to_json."""
     arg_types = json.loads(arg_types_json)
     return {name: type_from_dict(type_dict) for name, type_dict in arg_types.items()}
 
 
-TypeEncoder = Callable[[type], str]
+TypeEncoder = Callable[[Union[type, TypedDictProxy]], str]
 
 
-def maybe_encode_type(encode: TypeEncoder, typ: Optional[type]) -> Optional[str]:
+def maybe_encode_type(encode: TypeEncoder, typ: Optional[Union[type, TypedDictProxy]]) -> Optional[str]:
     if typ is None:
         return None
     return encode(typ)
 
 
-TypeDecoder = Callable[[str], type]
+TypeDecoder = Callable[[str], Union[type, TypedDictProxy]]
 
 
-def maybe_decode_type(decode: TypeDecoder, encoded: Optional[str]) -> Optional[type]:
+def maybe_decode_type(
+        decode: TypeDecoder, encoded: Optional[str],
+) -> Optional[Union[type, TypedDictProxy]]:
     if (encoded is None) or (encoded == 'null'):
         return None
     return decode(encoded)

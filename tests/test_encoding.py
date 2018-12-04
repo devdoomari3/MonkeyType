@@ -16,7 +16,7 @@ from typing import (
 
 import pytest
 
-from monkeytype.StructuredDict import StructuredDict
+from monkeytype.TypedDictProxy import TypedDictProxy
 from monkeytype.encoding import (
     CallTraceRow,
     maybe_decode_type,
@@ -39,7 +39,8 @@ def dummy_func(a, b):
     return a + b
 
 
-structured_dict = StructuredDict(
+typed_dict_proxy = TypedDictProxy(
+    'typed_dict_proxy',
     a=1
 )
 
@@ -48,37 +49,39 @@ class TestTypeConversion:
     @pytest.mark.parametrize(
         'typ',
         [
-            # Non-generics
-            NoneType,
-            int,
-            Outer,
-            Outer.Inner,
-            Any,
-            # Simple generics
-            Dict[Any, Any],
-            Dict[int, str],
-            List[str],
-            Optional[str],
-            Set[int],
-            Tuple[int, str, str],
-            Type[Outer],
-            Union[Outer.Inner, str, None],
-            # Nested generics
-            Dict[str, Union[str, int]],
-            List[Optional[str]],
-            # Let's get craaaazy
-            Dict[
-                str,
-                Union[
-                    Dict[str, int],
-                    Set[Outer.Inner],
-                    Optional[Dict[str, int]]
-                ]
-            ],
-            StructuredDict(
+            # # Non-generics
+            # NoneType,
+            # int,
+            # Outer,
+            # Outer.Inner,
+            # Any,
+            # # Simple generics
+            # Dict[Any, Any],
+            # Dict[int, str],
+            # List[str],
+            # Optional[str],
+            # Set[int],
+            # Tuple[int, str, str],
+            # Type[Outer],
+            # Union[Outer.Inner, str, None],
+            # # Nested generics
+            # Dict[str, Union[str, int]],
+            # List[Optional[str]],
+            # # Let's get craaaazy
+            # Dict[
+            #     str,
+            #     Union[
+            #         Dict[str, int],
+            #         Set[Outer.Inner],
+            #         Optional[Dict[str, int]]
+            #     ]
+            # ],
+            TypedDictProxy(
+                'TestEncodingRoot',
                 a=str,
                 b=int,
-                c=StructuredDict(
+                c=TypedDictProxy(
+                    'TestEncodingC',
                     nested_a=str,
                 ),
             )

@@ -13,7 +13,7 @@ from typing import (
 import pytest
 from django.utils.functional import cached_property
 
-from monkeytype.StructuredDict import StructuredDict
+from monkeytype.TypedDictProxy import TypedDictProxy
 from monkeytype.tracing import (
     CallTrace,
     CallTraceLogger,
@@ -203,7 +203,8 @@ class LazyValue:
         return result
 
 
-structured_dict = StructuredDict(
+test_dict_proxy = TypedDictProxy(
+    'TypedDictForTestTracingPy',
     a=3,
     b=5,
 )
@@ -320,15 +321,17 @@ class TestTraceCalls:
 
     def test_structured_dict(self, collector):
         with trace_calls(collector):
-            return_directly(structured_dict)
+            return_directly(test_dict_proxy)
         assert collector.traces == [
             CallTrace(
                 return_directly,
-                {'raw_input': StructuredDict(
+                {'raw_input': TypedDictProxy(
+                    'TypedDictForTestTracingPy',
                     a=int,
                     b=int,
                 )},
-                StructuredDict(
+                TypedDictProxy(
+                    'TypedDictForTestTracingPy',
                     a=int,
                     b=int,
                 )

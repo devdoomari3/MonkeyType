@@ -26,6 +26,7 @@ from typing import (
     Union,
 )
 
+from monkeytype import TypedDictProxy
 from monkeytype.compat import is_any, is_union, is_generic, qualname_of_generic
 
 try:
@@ -222,11 +223,13 @@ def update_signature_return(
     return sig.replace(return_annotation=anno)
 
 
-def shrink_traced_types(traces: Iterable[CallTrace]) -> Tuple[Dict[str, type], Optional[type], Optional[type]]:
+def shrink_traced_types(
+        traces: Iterable[CallTrace],
+) -> Tuple[Dict[str, type], Optional[type], Optional[type]]:
     """Merges the traced types and returns the minimally equivalent types"""
-    arg_types: DefaultDict[str, Set[type]] = collections.defaultdict(set)
-    return_types: Set[type] = set()
-    yield_types: Set[type] = set()
+    arg_types: DefaultDict[str, Set[Union[type, TypedDictProxy]]] = collections.defaultdict(set)
+    return_types: Set[Union[type, TypedDictProxy]] = set()
+    yield_types: Set[Union[type, TypedDictProxy]] = set()
     for t in traces:
         for arg, typ in t.arg_types.items():
             arg_types[arg].add(typ)
