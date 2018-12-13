@@ -25,7 +25,7 @@ from monkeytype.encoding import (
     type_to_dict,
     type_to_json,
     serialize_traces,
-)
+    TypeDetails)
 from monkeytype.exceptions import InvalidTypeError
 from monkeytype.tracing import CallTrace
 from monkeytype.typing import NoneType
@@ -71,9 +71,11 @@ class TestTypeConversion:
             ],
         ],
     )
-    def test_type_round_trip(self, typ):
-        assert type_from_dict(type_to_dict(typ)) == typ
-        assert type_from_json(type_to_json(typ)) == typ
+    def test_type_round_trip(self, typ, typ_details: Optional[TypeDetails] = None):
+        dict1 = type_to_dict(typ, typ_details)
+        type_f_d = type_from_dict(dict1)
+        assert type_from_dict(type_to_dict(typ, typ_details)) == (typ, typ_details)
+        assert type_from_json(type_to_json(typ, typ_details)) == (typ, typ_details)
 
     def test_trace_round_trip(self):
         trace = CallTrace(dummy_func, {'a': int, 'b': int}, int)
@@ -93,10 +95,10 @@ class TestTypeConversion:
             (Mock(return_value='foo'), str, 'foo', True),
         ]
     )
-    def test_maybe_encode_type(self, encoder, typ, expected, should_call_encoder):
-        ret = maybe_encode_type(encoder, typ)
+    def test_maybe_encode_type(self, encoder, typ, expected, should_call_encoder, typ_details: Optional[TypeDetails] = None):
+        ret = maybe_encode_type(encoder, typ, typ_details)
         if should_call_encoder:
-            encoder.assert_called_with(typ)
+            encoder.assert_called_with(typ, typ_details)
         else:
             encoder.assert_not_called()
         assert ret == expected

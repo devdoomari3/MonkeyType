@@ -25,7 +25,7 @@ from typing import (
     Optional,
     Union,
     cast,
-)
+    NewType)
 
 try:
     from django.utils.functional import cached_property  # type: ignore
@@ -35,6 +35,8 @@ except ImportError:
 from monkeytype.typing import get_type
 from monkeytype.util import get_func_fqname
 
+
+TypeDetails = NewType('TypeDetails', Dict[str, Any])
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +49,10 @@ class CallTrace:
         func: Callable,
         arg_types: Dict[str, type],
         return_type: Optional[type] = None,
-        yield_type: Optional[type] = None
+        yield_type: Optional[type] = None,
+        return_type_detail: Optional[TypeDetails] = None,
+        yield_type_detail: Optional[TypeDetails] = None,
+
     ) -> None:
         """
         Args:
@@ -62,6 +67,8 @@ class CallTrace:
         self.arg_types = arg_types
         self.return_type = return_type
         self.yield_type = yield_type
+        self.return_type_detail = return_type_detail
+        self.yield_type_detail = yield_type_detail
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, self.__class__):
@@ -230,9 +237,12 @@ class CallTracer:
         # from a function returning (or yielding) None. In the latter case, the
         # the last instruction that was executed should always be a return or a
         # yield.
+        from monkeytype.encoding import infer_data_types
+
         typ = get_type(arg)
         last_opcode = frame.f_code.co_code[frame.f_lasti]
         trace = self.traces.get(frame)
+
         if trace is None:
             return
         elif last_opcode == YIELD_VALUE_OPCODE:
@@ -242,6 +252,8 @@ class CallTracer:
                 trace.return_type = typ
             del self.traces[frame]
             self.logger.log(trace)
+
+        trace.return_type_detail = infer_data_types(arg)
 
     def __call__(self, frame: FrameType, event: str, arg: Any) -> 'CallTracer':
         code = frame.f_code
